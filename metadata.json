@@ -1,0 +1,8 @@
+{
+  "name": "Remix Fintack - Asistente Financiero Freelance",
+  "description": "Asistente financiero minimalista con escáner de recibos por IA, registro rápido de movimientos y estimación tributaria para freelancers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

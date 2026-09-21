@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collection": "users",
+      "fields": {
+        "userId": { "type": "string", "description": "Unique Firebase Auth UID of the user" },
+        "username": { "type": "string", "description": "Display name or business name" },
+        "email": { "type": "string", "description": "User email address" },
+        "plan": { "type": "string", "description": "Subscription plan (LITE, STANDARD, PRO)" },
+        "taxSettings": { "type": "map", "description": "User tax configuration, rates, budget and savings goal" },
+        "termsAccepted": { "type": "boolean", "description": "Whether terms and conditions have been accepted" },
+        "onboardingCompleted": { "type": "boolean", "description": "Whether onboarding tutorial is completed" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of user creation" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last update" }
+      }
+    },
+    "Transaction": {
+      "collection": "users/{userId}/transactions",
+      "fields": {
+        "id": { "type": "string", "description": "Unique transaction ID" },
+        "type": { "type": "string", "description": "INCOME or EXPENSE" },
+        "amount": { "type": "number", "description": "Transaction amount in configured currency" },
+        "category": { "type": "string", "description": "Category name" },
+        "date": { "type": "string", "description": "YYYY-MM-DD transaction date" },
+        "description": { "type": "string", "description": "Transaction details or concept" },
+        "merchant": { "type": "string", "description": "Vendor, supplier, or client name" },
+        "paymentMethod": { "type": "string", "description": "Payment instrument used" },
+        "vatAmount": { "type": "number", "description": "Tax / VAT amount included" },
+        "isDeductible": { "type": "boolean", "description": "Whether this transaction is tax deductible" },
+        "hasReceipt": { "type": "boolean", "description": "Whether a physical or digital receipt exists" },
+        "receiptUrl": { "type": "string", "description": "URL or storage reference of receipt scan" },
+        "invoiceFolio": { "type": "string", "description": "Fiscal invoice or receipt folio identifier" },
+        "createdAt": { "type": "string", "description": "ISO creation timestamp" },
+        "updatedAt": { "type": "string", "description": "ISO update timestamp" }
+      }
+    },
+    "ActivityLog": {
+      "collection": "users/{userId}/activity_logs",
+      "fields": {
+        "id": { "type": "string", "description": "Unique activity log ID" },
+        "type": { "type": "string", "description": "Action type" },
+        "description": { "type": "string", "description": "Human-readable action description" },
+        "timestamp": { "type": "string", "description": "Timestamp or relative description" }
+      }
+    }
+  }
+}
