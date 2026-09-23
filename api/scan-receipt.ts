@@ -102,7 +102,7 @@ Extrae los datos en formato JSON estricto con las siguientes llaves:
       required: ['merchant', 'amount', 'category', 'type', 'deductiblePercent'],
     };
 
-    const candidateModels = ['gemini-2.0-flash', 'gemini-2.5-flash'];
+    const candidateModels = ['gemini-3.6-flash'];
     let responseText = '';
     let lastError: any = null;
 
