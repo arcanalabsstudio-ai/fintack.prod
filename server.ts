@@ -32,7 +32,7 @@ async function startServer() {
 
   // Helper to query Gemini with automatic resilience against temporary demand spikes
   const generateGeminiContent = async (ai: GoogleGenAI, params: any) => {
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+    const candidateModels = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
     let lastError: any = null;
     for (const model of candidateModels) {
       try {
