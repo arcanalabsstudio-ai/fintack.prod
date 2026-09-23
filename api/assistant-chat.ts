@@ -95,29 +95,15 @@ Contexto de la app:
 
     conversationContents.push({ role: 'user', parts: [{ text: message }] });
 
-    let response;
-    try {
-      response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: conversationContents,
-        config: {
-          systemInstruction,
-          temperature: 0.2,
-          maxOutputTokens: 600,
-        },
-      });
-    } catch (modelErr: any) {
-      console.warn('Error con gemini-2.0-flash, intentando modelo alternativo:', modelErr?.message);
-      response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: conversationContents,
-        config: {
-          systemInstruction,
-          temperature: 0.2,
-          maxOutputTokens: 600,
-        },
-      });
-    }
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: conversationContents,
+      config: {
+        systemInstruction,
+        temperature: 0.2,
+        maxOutputTokens: 600,
+      },
+    });
 
     const replyText =
       response.text ||
