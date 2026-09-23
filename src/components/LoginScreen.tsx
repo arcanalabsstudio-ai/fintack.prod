@@ -10,19 +10,16 @@ import {
   CheckCircle2, 
   RefreshCw, 
   ShieldCheck,
-  Sparkles,
-  Code2,
-  ArrowRight
+  Sparkles
 } from 'lucide-react';
 import { cloudDb } from '../services/cloudDatabase';
 import { User } from '../lib/firebase';
 
 interface LoginScreenProps {
   onLoginSuccess?: (user: User) => void;
-  onDevBypass?: () => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onDevBypass }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -133,27 +130,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onDevB
       }
     } finally {
       setIsGoogleLoading(false);
-    }
-  };
-
-  const handleDevAccess = () => {
-    try {
-      localStorage.setItem('fintack_terms_accepted', 'true');
-      localStorage.setItem('fintack_dev_bypass', 'true');
-    } catch (e) {
-      console.warn('Could not store dev bypass in localStorage:', e);
-    }
-
-    if (onDevBypass) {
-      onDevBypass();
-    } else if (onLoginSuccess) {
-      const mockDevUser = {
-        uid: 'dev-mode-user',
-        email: 'dev@fintack.local',
-        displayName: 'Desarrollador (Modo Dev)',
-        isAnonymous: false,
-      } as User;
-      onLoginSuccess(mockDevUser);
     }
   };
 
@@ -464,28 +440,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onDevB
               </button>
             </p>
           )}
-        </div>
-
-        {/* ACCESO PARA DESARROLLO (TEMPORAL) */}
-        <div className="mt-5 pt-4 border-t border-[#182F2A]/60">
-          <button
-            type="button"
-            id="btn-dev-bypass"
-            onClick={handleDevAccess}
-            className="w-full py-2.5 px-3 bg-[#0A1A16] hover:bg-[#0F241F] text-amber-300 hover:text-amber-200 border border-amber-500/35 hover:border-amber-400/60 rounded-xl text-xs font-semibold flex items-center justify-between transition duration-200 active:scale-[0.99] cursor-pointer shadow-[0_2px_10px_rgba(245,158,11,0.06)] group"
-          >
-            <span className="flex items-center gap-2">
-              <Code2 className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-              <span>Entrar al Dashboard</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-[10px] bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded-full font-mono font-bold border border-amber-500/30">
-              Modo Dev
-              <ArrowRight className="w-3 h-3 text-amber-400" />
-            </span>
-          </button>
-          <p className="text-[10px] text-[#657F79] text-center mt-1.5">
-            Temporal: omite el registro para continuar el desarrollo del dashboard
-          </p>
         </div>
 
         {/* BADGES DE SEGURIDAD Y PRIVACIDAD */}

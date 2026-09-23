@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TaxSettings, PlanType, Transaction } from '../types';
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../data/mockData';
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../data/constants';
 import {
   X,
   Save,
@@ -702,7 +702,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. Freelancer"
+                placeholder={currentLang === 'en' ? 'e.g. John Doe' : 'ej. Tu Nombre o Empresa'}
                 className="w-full px-3 py-2 bg-[#081512] border border-[#182F2A] rounded-xl text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-[#14B8A6]"
               />
             </div>

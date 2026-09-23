@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, TaxSettings } from '../types';
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../data/mockData';
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../data/constants';
 import { TRANSLATIONS } from '../utils/translations';
 import { X, CheckCircle2, Save, ArrowLeft } from 'lucide-react';
 
@@ -220,7 +220,7 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                 setMerchant(e.target.value);
                 setMerchantError('');
               }}
-              placeholder={type === 'EXPENSE' ? 'ej. Adobe, AWS, Starbucks' : 'ej. Cliente Acme Corp'}
+              placeholder={type === 'EXPENSE' ? 'ej. Suscripción, Equipo, Insumos' : 'ej. Cliente Empresa'}
               className="w-full bg-[#121212] border border-[#2A2A2A] focus:border-[#14B8A6] rounded-xl px-3.5 py-2 text-sm text-white outline-none transition"
             />
             {merchantError && <p className="text-xs text-rose-400 mt-1">{merchantError}</p>}

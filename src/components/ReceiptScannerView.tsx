@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Transaction, PlanType, TaxSettings } from '../types';
-import { SAMPLE_RECEIPT_PRESETS, DEFAULT_EXPENSE_CATEGORIES } from '../data/mockData';
+import { DEFAULT_EXPENSE_CATEGORIES } from '../data/constants';
 import { formatCurrency } from '../utils/taxCalculator';
 import { TRANSLATIONS } from '../utils/translations';
 import { generateUniqueId } from '../utils/idGenerator';
 import {
   Scan,
   Upload,
+  Camera,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -25,6 +26,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { ProLockModal } from './ProLockModal';
+import { CameraCaptureModal } from './CameraCaptureModal';
 
 interface ReceiptScannerViewProps {
   plan: PlanType;
@@ -77,6 +79,24 @@ export const ReceiptScannerView: React.FC<ReceiptScannerViewProps> = ({
     name: 'Escáner en Lote',
     desc: 'Digitaliza múltiples comprobantes de forma simultánea con inteligencia artificial.',
   });
+
+  // Refs and Drag-Drop State for File Upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState<boolean>(false);
+
+  // Handle Photo Captured from getUserMedia Camera
+  const handleCameraCapture = (imageDataUrl: string, fileName: string) => {
+    const newItem: BatchReceiptItem = {
+      id: generateUniqueId('cam'),
+      fileName: fileName || `Foto_Recibo_${Date.now()}.jpg`,
+      imagePreview: imageDataUrl,
+      status: 'PENDING',
+    };
+    setBatchItems((prev) => [...prev, newItem]);
+    setBatchSavedSuccess(false);
+    setIsCameraModalOpen(false);
+  };
 
   // Edit Modal State
   const [editingItem, setEditingItem] = useState<BatchReceiptItem | null>(null);
@@ -158,61 +178,62 @@ export const ReceiptScannerView: React.FC<ReceiptScannerViewProps> = ({
     setEditingItem(null);
   };
 
-  // File Upload Handler (Supports multiple files)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Process Files from Camera, File Picker, or Drag-and-Drop
+  const processFiles = (fileList: File[]) => {
+    if (!fileList || fileList.length === 0) return;
 
+    const filesToLoad = plan === 'PRO' ? fileList : [fileList[0]];
     const newItems: BatchReceiptItem[] = [];
-    const fileList: File[] = Array.from(files);
-
     let loadedCount = 0;
-    fileList.forEach((file, index) => {
+
+    filesToLoad.forEach((file) => {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result as string;
         newItems.push({
           id: generateUniqueId('file'),
-          fileName: file.name,
+          fileName: file.name || `Comprobante_${Date.now()}.jpg`,
           imagePreview: base64,
           status: 'PENDING',
         });
 
         loadedCount++;
-        if (loadedCount === fileList.length) {
+        if (loadedCount === filesToLoad.length) {
           setBatchItems((prev) => [...prev, ...newItems]);
           setBatchSavedSuccess(false);
         }
       };
       reader.readAsDataURL(file);
     });
+  };
 
-    // Reset input value to allow re-selecting same files
+  // Change event from either camera input or file picker input
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    processFiles(Array.from(files));
+
+    // Reset input value to allow re-selecting or re-photographing same files
     e.target.value = '';
   };
 
-  // Preset Selection Handler
-  const handleSelectPreset = (preset: (typeof SAMPLE_RECEIPT_PRESETS)[0]) => {
-    const newItem: BatchReceiptItem = {
-      id: generateUniqueId('preset'),
-      fileName: `Demo_${preset.merchant.replace(/\s+/g, '_')}.png`,
-      imagePreview: preset.sampleImage,
-      status: 'SUCCESS',
-      extractedResult: {
-        merchant: preset.merchant,
-        amount: preset.amount,
-        taxAmount: preset.taxAmount,
-        category: preset.category,
-        type: preset.type,
-        date: preset.date,
-        deductiblePercent: preset.deductiblePercent,
-        taxNote: preset.taxNote,
-        rawSummary: preset.rawSummary,
-      },
-    };
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
-    setBatchItems((prev) => [...prev, newItem]);
-    setBatchSavedSuccess(false);
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    processFiles(Array.from(files));
   };
 
   // Process a single receipt with Gemini OCR API
@@ -404,77 +425,129 @@ export const ReceiptScannerView: React.FC<ReceiptScannerViewProps> = ({
         )}
       </div>
 
-      {/* SAMPLE PRESETS */}
-      <div className="bg-[#0B1512] p-5 rounded-2xl border border-[#182F2A] shadow-md">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#7C9791] mb-3 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-[#14B8A6]" />
-          <span>Probar con Muestras de Ejemplo</span>
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {SAMPLE_RECEIPT_PRESETS.map((preset, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSelectPreset(preset)}
-              className="text-left p-3 rounded-xl border border-[#182F2A] hover:border-[#14B8A6] hover:bg-[#11241F]/40 transition group flex items-center justify-between"
-            >
-              <div>
-                <div className="font-semibold text-xs text-white">
-                  {preset.title}
-                </div>
-                <div className="text-[11px] text-[#7C9791] mt-0.5">{preset.merchant}</div>
-                <div className="text-xs font-mono font-bold text-[#14B8A6] mt-1">
-                  {formatCurrency(preset.amount, currency)}
-                </div>
-              </div>
-              <span className="text-[10px] text-[#14B8A6] font-bold bg-[#11221D] px-2 py-1 rounded-lg border border-[#1C3A31]">
-                + Agregar
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* MULTI-FILE UPLOAD AREA */}
       <div className="bg-[#0B1512] p-5 sm:p-6 rounded-2xl border border-[#182F2A] shadow-md space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <Upload className="w-4 h-4 text-[#14B8A6]" />
-            <span>
-              {plan === 'PRO'
-                ? 'Cargar Comprobantes (Múltiples Archivos)'
-                : 'Cargar Comprobante'}
-            </span>
-          </h3>
+          <div>
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Scan className="w-4 h-4 text-[#14B8A6]" />
+              <span>
+                {plan === 'PRO'
+                  ? 'Digitalizar Comprobantes (Cámara o Archivos)'
+                  : 'Digitalizar Comprobante'}
+              </span>
+            </h3>
+            <p className="text-xs text-[#7C9791] mt-0.5">
+              Toma una foto en tiempo real con tu cámara o sube imágenes/PDFs desde tu dispositivo
+            </p>
+          </div>
           {batchItems.length > 0 && (
-            <span className="text-xs font-mono text-[#7C9791]">
+            <span className="text-xs font-mono text-[#7C9791] bg-[#11241F] px-3 py-1 rounded-xl border border-[#1C3A31]">
               Archivos en lista: <strong className="text-white">{batchItems.length}</strong>
             </span>
           )}
         </div>
 
-        <div className="border-2 border-dashed border-[#182F2A] hover:border-[#14B8A6] rounded-2xl p-6 text-center transition bg-[#081512] relative">
-          <input
-            type="file"
-            multiple={plan === 'PRO'}
-            accept="image/*,application/pdf"
-            onChange={handleFileUpload}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          />
-          <div className="space-y-2 py-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#0B1512] border border-[#182F2A] text-[#14B8A6] flex items-center justify-center mx-auto shadow-xs">
-              <Upload className="w-6 h-6" />
+        {/* INPUT DE ARCHIVO NORMAL (SIN CAPTURE PARA ABRIR GALERÍA O SELECTOR DE ARCHIVOS) */}
+        <input
+          ref={fileInputRef}
+          id="scanner-file-input"
+          type="file"
+          accept="image/*,application/pdf"
+          multiple={plan === 'PRO'}
+          onChange={handleFileUpload}
+          className="hidden"
+          aria-label="Subir imagen o archivo"
+        />
+
+        {/* DOS OPCIONES CLARAS: TOMAR FOTO (CÁMARA GETUSERMEDIA) Y SUBIR IMAGEN (EXPLORADOR DE ARCHIVOS) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* OPCIÓN 1: TOMAR FOTO (STREAM EN VIVO VÍA GETUSERMEDIA) */}
+          <button
+            type="button"
+            onClick={() => setIsCameraModalOpen(true)}
+            className="group relative p-5 rounded-2xl bg-gradient-to-b from-[#0F2821] to-[#0A1D18] border-2 border-[#1E4339] hover:border-[#14B8A6] transition-all duration-200 shadow-lg flex flex-col items-start text-left gap-3 hover:shadow-[0_0_24px_rgba(20,184,166,0.18)] cursor-pointer"
+          >
+            <div className="flex items-center justify-between w-full">
+              <div className="w-12 h-12 rounded-xl bg-[#14B8A6]/15 border border-[#14B8A6]/40 text-[#14B8A6] flex items-center justify-center group-hover:bg-[#14B8A6] group-hover:text-[#020504] transition-all duration-200 shadow-xs">
+                <Camera className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#14B8A6]/20 text-[#14B8A6] font-bold border border-[#14B8A6]/40 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#14B8A6] animate-ping"></span>
+                Cámara en vivo
+              </span>
             </div>
-            <p className="text-xs font-semibold text-white">
-              {plan === 'PRO'
-                ? 'Haz clic o arrastra aquí varios recibos'
-                : 'Haz clic o arrastra aquí tu recibo o factura'}
-            </p>
-            <p className="text-[11px] text-[#7C9791]">
-              {plan === 'PRO'
-                ? 'Puedes seleccionar múltiples imágenes o PDFs a la vez (PNG, JPG, WEBP, PDF)'
-                : 'Formatos soportados: PNG, JPG, WEBP, PDF'}
-            </p>
-          </div>
+
+            <div>
+              <h4 className="text-sm font-bold text-white group-hover:text-[#14B8A6] transition">
+                Tomar foto
+              </h4>
+              <p className="text-xs text-[#7C9791] mt-1 leading-relaxed">
+                Abre la transmisión de tu cámara en vivo con visor asistido para capturar recibos en papel al instante.
+              </p>
+            </div>
+
+            <div className="mt-auto w-full pt-1">
+              <div className="w-full py-2.5 px-3.5 bg-[#14B8A6] hover:bg-[#0D9488] text-[#020504] font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs">
+                <Camera className="w-4 h-4" />
+                <span>Abrir cámara en vivo</span>
+              </div>
+            </div>
+          </button>
+
+          {/* OPCIÓN 2: SUBIR IMAGEN */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="group relative p-5 rounded-2xl bg-gradient-to-b from-[#0C1A17] to-[#081512] border-2 border-[#182F2A] hover:border-[#14B8A6] transition-all duration-200 shadow-lg flex flex-col items-start text-left gap-3 hover:shadow-[0_0_24px_rgba(20,184,166,0.18)] cursor-pointer"
+          >
+            <div className="flex items-center justify-between w-full">
+              <div className="w-12 h-12 rounded-xl bg-[#11241F] border border-[#1C3A31] text-[#14B8A6] flex items-center justify-center group-hover:bg-[#14B8A6] group-hover:text-[#020504] transition-all duration-200 shadow-xs">
+                <Upload className="w-6 h-6" />
+              </div>
+              <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#162D28] text-[#99B2AC] font-semibold border border-[#23453E]">
+                {plan === 'PRO' ? 'Lotes múltiples' : 'Archivos'}
+              </span>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-bold text-white group-hover:text-[#14B8A6] transition">
+                Subir imagen
+              </h4>
+              <p className="text-xs text-[#7C9791] mt-1 leading-relaxed">
+                {plan === 'PRO'
+                  ? 'Abre la galería o explorador de archivos para elegir múltiples imágenes o PDFs (PNG, JPG, PDF).'
+                  : 'Abre la galería o explorador de archivos para elegir un comprobante PNG, JPG o PDF.'}
+              </p>
+            </div>
+
+            <div className="mt-auto w-full pt-1">
+              <div className="w-full py-2.5 px-3.5 bg-[#11241F] group-hover:bg-[#1C3D34] text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 border border-[#1C3A31]">
+                <Upload className="w-4 h-4 text-[#14B8A6]" />
+                <span>Explorar archivos o galería</span>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* ZONA DE ARRASTRAR Y SOLTAR (DESKTOP DRAG & DROP) */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-2xl p-4 text-center transition cursor-pointer ${
+            isDragging
+              ? 'border-[#14B8A6] bg-[#11241F]'
+              : 'border-[#182F2A] hover:border-[#14B8A6]/60 bg-[#081512]/60'
+          }`}
+        >
+          <p className="text-xs text-[#7C9791]">
+            <span className="text-white font-medium">¿Estás en PC?</span> También puedes arrastrar y soltar tus comprobantes directamente aquí.
+          </p>
+          <p className="text-[11px] text-[#4A645F] mt-0.5">
+            Formatos soportados: PNG, JPG, JPEG, WEBP, PDF {plan === 'PRO' ? '(Carga en lote activada)' : ''}
+          </p>
         </div>
 
         {/* Optional Manual Prompt (Solo PRO) */}
@@ -873,6 +946,14 @@ export const ReceiptScannerView: React.FC<ReceiptScannerViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* CAMERA CAPTURE MODAL (GETUSERMEDIA) */}
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        onFallbackToFileUpload={() => fileInputRef.current?.click()}
+      />
 
       {/* PRO LOCK MODAL */}
       <ProLockModal

@@ -24,7 +24,7 @@ import {
   updateProfile
 } from '../lib/firebase';
 import { Transaction, TaxSettings, PlanType, ActivityLogItem } from '../types';
-import { INITIAL_TRANSACTIONS, DEFAULT_TAX_SETTINGS } from '../data/mockData';
+import { DEFAULT_TAX_SETTINGS } from '../data/constants';
 
 export interface CloudUserDoc {
   userId: string;
@@ -200,11 +200,7 @@ class CloudDatabaseService {
       txQuery,
       (snapshot) => {
         if (snapshot.empty) {
-          if (onInitialEmpty) {
-            onInitialEmpty();
-          } else {
-            onData([]);
-          }
+          onData([]);
           return;
         }
 
@@ -247,8 +243,9 @@ class CloudDatabaseService {
     }
   }
 
-  public async seedInitialTransactions(userId: string, initialTxs: Transaction[] = INITIAL_TRANSACTIONS): Promise<void> {
+  public async seedInitialTransactions(userId: string, initialTxs: Transaction[] = []): Promise<void> {
     if (this.isDevUser(userId)) return;
+    if (!initialTxs || initialTxs.length === 0) return;
     try {
       const batch = writeBatch(db);
       initialTxs.forEach((tx) => {

@@ -1,12 +1,12 @@
 {
-  "projectId": "straight-deck-5c9s2",
-  "appId": "1:97905819848:web:7a815f3ae978c29e98a5fd",
-  "apiKey": "AIzaSyBDd7RqV8DHZ5zTojoaJcUjWP7kdXhUYls",
-  "authDomain": "straight-deck-5c9s2.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-remixfintackasis-1e3c3a84-3540-4b19-98f8-6641a7e2c923",
-  "storageBucket": "straight-deck-5c9s2.firebasestorage.app",
-  "messagingSenderId": "97905819848",
+  "projectId": "fintack-prod",
+  "appId": "1:930349565104:web:1fdd49854de4bcb863e775",
+  "apiKey": "AIzaSyA4JPVxaFXexEGcdDWfwC7o783A0YFjK6M",
+  "authDomain": "fintack-prod.firebaseapp.com",
+  "firestoreDatabaseId": "",
+  "storageBucket": "fintack-prod.firebasestorage.app",
+  "messagingSenderId": "930349565104",
   "measurementId": "",
-  "oAuthClientId": "97905819848-ji9udr43u3tv02gl2j30g08int9p9rtc.apps.googleusercontent.com",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

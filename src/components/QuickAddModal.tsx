@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, TaxSettings } from '../types';
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../data/mockData';
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../data/constants';
 import { TRANSLATIONS } from '../utils/translations';
 import { X, ArrowRight, ArrowLeft, CheckCircle2, Upload, Scan, Receipt } from 'lucide-react';
 
@@ -255,7 +255,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder={type === 'EXPENSE' ? 'e.g. Figma, WeWork' : 'e.g. Acme Corp'}
+                placeholder={type === 'EXPENSE' ? 'ej. Servicios Cloud, Insumos' : 'ej. Cliente Empresa'}
                 value={merchant}
                 onChange={(e) => {
                   setMerchant(e.target.value);

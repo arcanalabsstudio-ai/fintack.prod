@@ -525,7 +525,7 @@ export const BankStatementImportModal: React.FC<BankStatementImportModalProps> =
                     Categorización Contextual
                   </div>
                   <p className="text-[11px] text-[#7C9791] leading-relaxed">
-                    Gemini analiza la descripción completa (ej. Uber Eats a Alimentación, Uber a Transporte).
+                    Gemini analiza la descripción bancaria para asignar la categoría y deducibilidad precisa.
                   </p>
                 </div>
 

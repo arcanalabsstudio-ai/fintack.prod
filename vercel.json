@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/assistant/chat",
+      "destination": "/api/assistant-chat"
+    },
+    {
+      "source": "/api/assistant-chat",
+      "destination": "/api/assistant-chat"
+    },
+    {
+      "source": "/api/scan-receipt",
+      "destination": "/api/scan-receipt"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/((?!api/|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

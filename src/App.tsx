@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Transaction, TaxSettings, PlanType, ActivityLogItem } from './types';
-import { INITIAL_TRANSACTIONS, DEFAULT_TAX_SETTINGS, DEFAULT_BUDGET_SETTINGS, DEFAULT_SAVINGS_GOAL } from './data/mockData';
+import { DEFAULT_TAX_SETTINGS, DEFAULT_BUDGET_SETTINGS, DEFAULT_SAVINGS_GOAL } from './data/constants';
 import { Plus, Bot } from 'lucide-react';
 import { Header } from './components/Header';
 import { DashboardView } from './components/DashboardView';
@@ -29,19 +29,7 @@ export default function App() {
   const [isAssistantOpen, setIsAssistantOpen] = useState<boolean>(false);
 
   // Firebase User & Sync Status
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      if (localStorage.getItem('fintack_dev_bypass') === 'true') {
-        return {
-          uid: 'dev-mode-user',
-          email: 'dev@fintack.local',
-          displayName: 'Desarrollador (Modo Dev)',
-          isAnonymous: false,
-        } as User;
-      }
-    } catch (e) {}
-    return null;
-  });
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('connecting');
   const isInitialSyncRef = useRef<boolean>(false);
@@ -121,20 +109,53 @@ export default function App() {
     };
   }, []);
 
-  // Load state from localStorage or initial defaults, sanitizing to guarantee collision-free unique IDs
+  // Load state from localStorage ensuring any legacy mock/demo transactions are completely purged
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem('fintack_transactions');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const sanitized = sanitizeUniqueIds(parsed, 'tx');
-          // If duplicate IDs were repaired, overwrite localStorage cleanly
+          // Filter out any legacy mock data (Acme Corp, Maria Becerra, Figma, WeWork, Apple Store, etc.)
+          const cleanTxs = parsed.filter((tx: any) => {
+            const m = String(tx?.merchant || '').toLowerCase();
+            const d = String(tx?.description || '').toLowerCase();
+            const id = String(tx?.id || '');
+            if (
+              m.includes('acme') ||
+              m.includes('becerra') ||
+              m.includes('maria') ||
+              m.includes('figma') ||
+              m.includes('wework') ||
+              m.includes('apple') ||
+              m.includes('bistro') ||
+              m.includes('uber') ||
+              m.includes('netflix') ||
+              m.includes('supermercado')
+            ) {
+              return false;
+            }
+            if (
+              d.includes('acme') ||
+              d.includes('becerra') ||
+              d.includes('maria') ||
+              d.includes('figma') ||
+              d.includes('wework')
+            ) {
+              return false;
+            }
+            if (/^tx-[1-7]$/.test(id)) {
+              return false;
+            }
+            return true;
+          });
+
+          const sanitized = sanitizeUniqueIds(cleanTxs, 'tx');
           if (JSON.stringify(sanitized) !== saved) {
             try {
               localStorage.setItem('fintack_transactions', JSON.stringify(sanitized));
             } catch (e) {
-              console.error('Error saving sanitized transactions to localStorage:', e);
+              console.error('Error updating clean transactions in localStorage:', e);
             }
           }
           return sanitized;
@@ -143,7 +164,7 @@ export default function App() {
     } catch (e) {
       console.error('Error loading transactions:', e);
     }
-    return sanitizeUniqueIds(INITIAL_TRANSACTIONS, 'tx');
+    return [];
   });
 
   const [taxSettings, setTaxSettings] = useState<TaxSettings>(() => {
@@ -233,11 +254,6 @@ export default function App() {
 
     cloudDb.initAuth(
       (currentUser) => {
-        if (localStorage.getItem('fintack_dev_bypass') === 'true') {
-          setIsAuthReady(true);
-          setSyncStatus('synced');
-          return;
-        }
         setUser(currentUser);
         setIsAuthReady(true);
         if (currentUser) {
@@ -245,11 +261,17 @@ export default function App() {
 
           // 1. Subscribe to User Profile in Firestore
           userUnsubscribe = cloudDb.subscribeToUserProfile(currentUser.uid, (cloudData) => {
+            const defaultDerivedName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Usuario');
             if (cloudData) {
               if (cloudData.taxSettings) {
+                const cloudUsername = cloudData.taxSettings.username || cloudData.username;
+                const finalUsername = (cloudUsername && cloudUsername.toLowerCase() !== 'freelancer')
+                  ? cloudUsername
+                  : defaultDerivedName;
                 setTaxSettings((prev) => ({
                   ...prev,
                   ...cloudData.taxSettings,
+                  username: finalUsername,
                 }));
               }
               if (cloudData.plan) {
@@ -260,10 +282,16 @@ export default function App() {
               }
             } else {
               // Create user document if it does not exist yet
+              const initialName = (taxSettings.username && taxSettings.username.toLowerCase() !== 'freelancer')
+                ? taxSettings.username
+                : defaultDerivedName;
               cloudDb.saveUserProfile(currentUser.uid, {
-                username: taxSettings.username || (currentUser.email ? currentUser.email.split('@')[0] : 'Freelancer'),
+                username: initialName,
                 plan,
-                taxSettings,
+                taxSettings: {
+                  ...taxSettings,
+                  username: initialName,
+                },
                 termsAccepted: isTermsAccepted,
                 email: currentUser.email,
               });
@@ -274,17 +302,8 @@ export default function App() {
           txsUnsubscribe = cloudDb.subscribeToTransactions(
             currentUser.uid,
             (remoteTxs) => {
-              if (remoteTxs.length > 0) {
-                setTransactions(sanitizeUniqueIds(remoteTxs, 'tx'));
-              }
+              setTransactions(sanitizeUniqueIds(remoteTxs, 'tx'));
               setSyncStatus('synced');
-            },
-            () => {
-              // Remote collection is empty: Seed initial transactions to Firestore
-              if (!isInitialSyncRef.current) {
-                isInitialSyncRef.current = true;
-                cloudDb.seedInitialTransactions(currentUser.uid, transactions);
-              }
             }
           );
 
@@ -544,8 +563,7 @@ export default function App() {
   };
 
   const handleResetData = () => {
-    const cleanDefaults = sanitizeUniqueIds(INITIAL_TRANSACTIONS, 'tx');
-    setTransactions(cleanDefaults);
+    setTransactions([]);
     setTaxSettings(DEFAULT_TAX_SETTINGS);
     try {
       localStorage.removeItem('fintack_transactions');
@@ -553,7 +571,7 @@ export default function App() {
       localStorage.removeItem('fintack_terms_accepted');
       localStorage.removeItem('fintack_terms_accepted_date');
       localStorage.removeItem('fintack_onboarding_completed');
-      localStorage.setItem('fintack_transactions', JSON.stringify(cleanDefaults));
+      localStorage.setItem('fintack_transactions', JSON.stringify([]));
     } catch (e) {
       console.error('Error clearing localStorage on reset:', e);
     }
@@ -561,7 +579,6 @@ export default function App() {
 
     const currentUser = user || cloudDb.getCurrentUser();
     if (currentUser) {
-      cloudDb.seedInitialTransactions(currentUser.uid, INITIAL_TRANSACTIONS);
       cloudDb.saveUserProfile(currentUser.uid, {
         taxSettings: DEFAULT_TAX_SETTINGS,
         plan: 'PRO',
@@ -584,22 +601,6 @@ export default function App() {
         });
       });
     }
-  };
-
-  const handleDevBypass = () => {
-    try {
-      localStorage.setItem('fintack_dev_bypass', 'true');
-      localStorage.setItem('fintack_terms_accepted', 'true');
-    } catch (e) {}
-    setIsTermsAccepted(true);
-    const mockDevUser = {
-      uid: 'dev-mode-user',
-      email: 'dev@fintack.local',
-      displayName: 'Desarrollador (Modo Dev)',
-      isAnonymous: false,
-    } as User;
-    setUser(mockDevUser);
-    setSyncStatus('synced');
   };
 
   const handleSignOut = async () => {
@@ -626,7 +627,6 @@ export default function App() {
           onLoginSuccess={(loggedUser) => {
             setUser(loggedUser);
           }}
-          onDevBypass={handleDevBypass}
         />
       )}
 
@@ -662,7 +662,6 @@ export default function App() {
             syncStatus={syncStatus}
             user={user}
             onOpenCloudModal={() => setIsCloudModalOpen(true)}
-            onReturnToLogin={handleSignOut}
           />
 
           {/* MAIN VIEW CONTENT */}
@@ -672,6 +671,7 @@ export default function App() {
                 transactions={transactions}
                 taxSettings={taxSettings}
                 plan={plan}
+                user={user}
                 onOpenQuickAdd={() => setIsQuickAddOpen(true)}
                 onNavigateTab={(tab) => setCurrentTab(tab)}
                 onUpgradePlan={() => setPlan('PRO')}

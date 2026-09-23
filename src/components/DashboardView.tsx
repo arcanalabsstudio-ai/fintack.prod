@@ -16,6 +16,7 @@ import {
   Area,
 } from 'recharts';
 import { Transaction, TaxSettings, PlanType } from '../types';
+import { User } from '../lib/firebase';
 import { calculateTaxEstimate, getCategoryBreakdown, formatCurrency } from '../utils/taxCalculator';
 import { TRANSLATIONS } from '../utils/translations';
 import {
@@ -25,7 +26,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Receipt,
-  Plus,
   Sparkles,
   ChevronRight,
   CheckCircle2,
@@ -56,6 +56,7 @@ interface DashboardViewProps {
   transactions: Transaction[];
   taxSettings: TaxSettings;
   plan: PlanType;
+  user?: User | null;
   onOpenQuickAdd: () => void;
   onNavigateTab: (tab: string) => void;
   onUpgradePlan: () => void;
@@ -67,6 +68,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   transactions,
   taxSettings,
   plan,
+  user,
   onOpenQuickAdd,
   onNavigateTab,
   onUpgradePlan,
@@ -136,17 +138,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     const hasAnyData = months.some((m) => m.Ingresos > 0 || m.Gastos > 0);
     if (!hasAnyData) {
-      return [
-        { month: monthNames[(now.getMonth() - 5 + 12) % 12], Ingresos: 3200, Gastos: 1200 },
-        { month: monthNames[(now.getMonth() - 4 + 12) % 12], Ingresos: 4100, Gastos: 1500 },
-        { month: monthNames[(now.getMonth() - 3 + 12) % 12], Ingresos: 3800, Gastos: 1100 },
-        { month: monthNames[(now.getMonth() - 2 + 12) % 12], Ingresos: 4500, Gastos: 1800 },
-        { month: monthNames[(now.getMonth() - 1 + 12) % 12], Ingresos: 4200, Gastos: 1400 },
-        { month: monthNames[now.getMonth()], Ingresos: taxEstimate.grossIncome || 5000, Gastos: taxEstimate.totalExpenses || 1600 },
-      ];
+      return [];
     }
     return months;
-  }, [transactions, monthNames, taxEstimate]);
+  }, [transactions, monthNames]);
 
   // Bar Chart Data (Distribución de Gastos)
   const barChartData = useMemo(() => {
@@ -157,13 +152,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         amount: cat.amount,
       }));
     }
-    return [
-      { category: 'Software', fullCategory: 'Software & Herramientas', amount: 450 },
-      { category: 'Espacio', fullCategory: 'Espacio de Trabajo', amount: 350 },
-      { category: 'Equipamiento', fullCategory: 'Equipamiento & Hardware', amount: 280 },
-      { category: 'Alimentación', fullCategory: 'Alimentación & Viáticos', amount: 200 },
-      { category: 'Otros', fullCategory: 'Otros Gastos Operativos', amount: 150 },
-    ];
+    return [];
   }, [expenseCategories]);
 
   // Tax Evolution Data (Evolución de Impuestos ISR e IVA)
@@ -200,25 +189,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       });
     }
 
-    const hasAnyData = months.some((m) => m.ISR > 0 || m.IVA > 0);
+    const hasAnyData = months.some((m) => m.ISR > 0 || m.IVA > 0 || m.Ingresos > 0);
     if (!hasAnyData) {
-      return [
-        { month: monthNames[(now.getMonth() - 5 + 12) % 12], ISR: 64, IVA: 180, 'Total Impuestos': 244, Ingresos: 3200 },
-        { month: monthNames[(now.getMonth() - 4 + 12) % 12], ISR: 82, IVA: 240, 'Total Impuestos': 322, Ingresos: 4100 },
-        { month: monthNames[(now.getMonth() - 3 + 12) % 12], ISR: 76, IVA: 210, 'Total Impuestos': 286, Ingresos: 3800 },
-        { month: monthNames[(now.getMonth() - 2 + 12) % 12], ISR: 90, IVA: 260, 'Total Impuestos': 350, Ingresos: 4500 },
-        { month: monthNames[(now.getMonth() - 1 + 12) % 12], ISR: 84, IVA: 235, 'Total Impuestos': 319, Ingresos: 4200 },
-        {
-          month: monthNames[now.getMonth()],
-          ISR: Math.round(taxEstimate.estimatedIncomeTax || 100),
-          IVA: Math.round(taxEstimate.estimatedVAT || 280),
-          'Total Impuestos': Math.round(taxEstimate.totalEstimatedTax || 380),
-          Ingresos: taxEstimate.grossIncome || 5000,
-        },
-      ];
+      return [];
     }
     return months;
-  }, [transactions, monthNames, taxSettings, taxEstimate]);
+  }, [transactions, monthNames, taxSettings]);
 
   const BAR_COLORS = ['#14B8A6', '#10B981', '#34D399', '#059669', '#6EE7B7', '#A7F3D0'];
 
@@ -410,9 +386,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const getWelcomeText = () => {
-    const user = taxSettings.username?.trim();
-    if (user) return user;
-    return 'Freelancer';
+    // 1. If an authenticated user is logged in
+    if (user && !user.isAnonymous) {
+      if (user.displayName?.trim()) {
+        return user.displayName.trim();
+      }
+      if (user.email) {
+        const prefix = user.email.split('@')[0];
+        const formatted = prefix
+          .replace(/[._-]+/g, ' ')
+          .trim()
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+        if (formatted) return formatted;
+        return prefix;
+      }
+    }
+
+    // 2. If taxSettings has a customized username that is not generic 'Freelancer'
+    const customUser = taxSettings.username?.trim();
+    if (customUser && customUser.toLowerCase() !== 'freelancer') {
+      return customUser;
+    }
+
+    return 'Usuario';
   };
 
   const greeting = getGreeting();
@@ -433,6 +432,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </h1>
         </div>
       </header>
+
+      {/* ESTADO VACÍO / BIENVENIDA PARA NUEVOS USUARIOS */}
+      {transactions.length === 0 && (
+        <section className="bg-gradient-to-r from-[#0B1512] via-[#0E1F1A] to-[#0B1512] p-6 sm:p-7 rounded-2xl border border-[#14B8A6]/40 shadow-xl relative overflow-hidden flex items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-[#11241F] text-[#14B8A6] rounded-2xl border border-[#1C3A31] shrink-0">
+              <Sparkles className="w-6 h-6 text-[#14B8A6]" />
+            </div>
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <span>{t.welcomeTitle || 'Bienvenido a Fintack'}</span>
+                <span className="text-[10px] bg-[#14B8A6]/20 text-[#14B8A6] px-2 py-0.5 rounded-full font-mono font-semibold border border-[#14B8A6]/30">
+                  Comienza aquí
+                </span>
+              </h3>
+              <p className="text-xs sm:text-sm text-[#7C9791] mt-1 max-w-xl">
+                {t.welcomeDesc || 'Agrega tu primera transacción para comenzar a ver tu panorama fiscal'}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* 1. SECCIÓN FIJA - NIVEL LITE (SIEMPRE VISIBLE): LAS 4 TARJETAS PRINCIPALES */}
       <section className="space-y-2.5">
@@ -1157,25 +1178,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <p className="text-xs text-[#7C9791] mb-4">Comportamiento de retención ISR e IVA mensual</p>
 
                 <div className="w-full h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={taxEvolutionData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#182F2A" opacity={0.6} />
-                      <XAxis dataKey="month" stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} />
-                      <YAxis stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} tickFormatter={(val) => `$${val}`} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0B1512',
-                          borderColor: '#182F2A',
-                          borderRadius: '0.75rem',
-                          color: '#FFFFFF',
-                          fontSize: '12px',
-                        }}
-                        formatter={(val: number, name: string) => [formatCurrency(val, currency), name]}
-                      />
-                      <Area type="monotone" dataKey="Total Impuestos" stroke="#14B8A6" fill="#14B8A6" fillOpacity={0.2} />
-                      <Area type="monotone" dataKey="ISR" stroke="#34D399" fill="#34D399" fillOpacity={0.15} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {taxEvolutionData.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2 bg-[#050B09] rounded-xl border border-[#182F2A]">
+                      <TrendingDown className="w-8 h-8 text-[#7C9791] opacity-50" />
+                      <p className="text-sm font-semibold text-white">No hay datos suficientes para mostrar el gráfico</p>
+                      <p className="text-xs text-[#7C9791]">Registra transacciones para proyectar tu carga de impuestos.</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={taxEvolutionData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#182F2A" opacity={0.6} />
+                        <XAxis dataKey="month" stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} />
+                        <YAxis stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0B1512',
+                            borderColor: '#182F2A',
+                            borderRadius: '0.75rem',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                          }}
+                          formatter={(val: number, name: string) => [formatCurrency(val, currency), name]}
+                        />
+                        <Area type="monotone" dataKey="Total Impuestos" stroke="#14B8A6" fill="#14B8A6" fillOpacity={0.2} />
+                        <Area type="monotone" dataKey="ISR" stroke="#34D399" fill="#34D399" fillOpacity={0.15} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             </div>
@@ -1370,49 +1399,65 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="p-5 sm:p-6 overflow-y-auto space-y-6">
               <div className="w-full h-80 bg-[#081512] p-4 rounded-xl border border-[#182F2A]">
                 {activeChartType === 'line' ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={lineChartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#182F2A" opacity={0.6} />
-                      <XAxis dataKey="month" stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} />
-                      <YAxis stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} tickFormatter={(val) => `$${val}`} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0B1512',
-                          borderColor: '#182F2A',
-                          borderRadius: '0.75rem',
-                          color: '#FFFFFF',
-                          fontSize: '12px',
-                        }}
-                        formatter={(val: number) => [formatCurrency(val, currency), '']}
-                      />
-                      <Legend verticalAlign="top" height={36} />
-                      <Line type="monotone" dataKey="Ingresos" stroke="#14B8A6" strokeWidth={3} dot={{ fill: '#14B8A6', r: 4 }} />
-                      <Line type="monotone" dataKey="Gastos" stroke="#FB7185" strokeWidth={3} dot={{ fill: '#FB7185', r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  lineChartData.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
+                      <TrendingDown className="w-8 h-8 text-[#7C9791] opacity-50" />
+                      <p className="text-sm font-semibold text-white">No hay datos suficientes para mostrar el gráfico</p>
+                      <p className="text-xs text-[#7C9791]">Agrega ingresos y gastos para comparar tus flujos mensuales.</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={lineChartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#182F2A" opacity={0.6} />
+                        <XAxis dataKey="month" stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} />
+                        <YAxis stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 12 }} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0B1512',
+                            borderColor: '#182F2A',
+                            borderRadius: '0.75rem',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                          }}
+                          formatter={(val: number) => [formatCurrency(val, currency), '']}
+                        />
+                        <Legend verticalAlign="top" height={36} />
+                        <Line type="monotone" dataKey="Ingresos" stroke="#14B8A6" strokeWidth={3} dot={{ fill: '#14B8A6', r: 4 }} />
+                        <Line type="monotone" dataKey="Gastos" stroke="#FB7185" strokeWidth={3} dot={{ fill: '#FB7185', r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart layout="vertical" data={barChartData} margin={{ top: 10, right: 50, left: 10, bottom: 10 }}>
-                      <CartesianGrid horizontal={false} stroke="#182F2A" opacity={0.6} />
-                      <XAxis type="number" stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 11 }} tickFormatter={(val) => `$${val}`} />
-                      <YAxis type="category" dataKey="category" stroke="#7C9791" tick={{ fill: '#E5E7EB', fontSize: 12 }} width={110} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0B1512',
-                          borderColor: '#182F2A',
-                          borderRadius: '0.75rem',
-                          color: '#FFFFFF',
-                          fontSize: '12px',
-                        }}
-                        formatter={(val: number) => [formatCurrency(val, currency), 'Gasto']}
-                      />
-                      <Bar dataKey="amount" radius={[0, 6, 6, 0]} barSize={22}>
-                        {barChartData.map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  barChartData.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
+                      <PieChart className="w-8 h-8 text-[#7C9791] opacity-50" />
+                      <p className="text-sm font-semibold text-white">No hay datos suficientes para mostrar el gráfico</p>
+                      <p className="text-xs text-[#7C9791]">Registra gastos categorizados para ver la distribución de tus desembolsos.</p>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart layout="vertical" data={barChartData} margin={{ top: 10, right: 50, left: 10, bottom: 10 }}>
+                        <CartesianGrid horizontal={false} stroke="#182F2A" opacity={0.6} />
+                        <XAxis type="number" stroke="#7C9791" tick={{ fill: '#7C9791', fontSize: 11 }} tickFormatter={(val) => `$${val}`} />
+                        <YAxis type="category" dataKey="category" stroke="#7C9791" tick={{ fill: '#E5E7EB', fontSize: 12 }} width={110} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0B1512',
+                            borderColor: '#182F2A',
+                            borderRadius: '0.75rem',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                          }}
+                          formatter={(val: number) => [formatCurrency(val, currency), 'Gasto']}
+                        />
+                        <Bar dataKey="amount" radius={[0, 6, 6, 0]} barSize={22}>
+                          {barChartData.map((_entry, index) => (
+                            <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )
                 )}
               </div>
 
@@ -1474,46 +1519,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Contenido */}
             <div className="p-5 sm:p-6 overflow-y-auto space-y-3">
-              {recentTransactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between p-3.5 rounded-xl bg-[#081512] border border-[#182F2A] hover:border-[#1C3A31] transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs border ${
-                        tx.type === 'INCOME'
-                          ? 'bg-[#11241F] text-[#14B8A6] border-[#1C3A31]/40'
-                          : 'bg-rose-500/10 text-rose-400 border-rose-500/10'
-                      }`}
-                    >
-                      {tx.type === 'INCOME' ? '+' : '-'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{tx.merchant}</p>
-                      <p className="text-xs text-[#7C9791]">
-                        {tx.category} • {tx.date}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span
-                      className={`text-sm font-bold font-mono ${
-                        tx.type === 'INCOME' ? 'text-[#14B8A6]' : 'text-white'
-                      }`}
-                    >
-                      {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(tx.amount, currency)}
-                    </span>
-                    {tx.hasReceipt && (
-                      <div className="text-[10px] text-[#14B8A6] font-semibold flex items-center justify-end gap-1 mt-0.5">
-                        <Check className="w-3 h-3" />
-                        <span>Comprobante Adjunto</span>
-                      </div>
-                    )}
-                  </div>
+              {recentTransactions.length === 0 ? (
+                <div className="py-12 text-center flex flex-col items-center justify-center space-y-3">
+                  <Receipt className="w-10 h-10 text-[#7C9791] opacity-50" />
+                  <p className="text-sm font-semibold text-white">Aún no hay transacciones registradas</p>
+                  <p className="text-xs text-[#7C9791] max-w-sm">
+                    Presiona el botón flotante (+) para agregar tu primer movimiento de ingreso o gasto.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                recentTransactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between p-3.5 rounded-xl bg-[#081512] border border-[#182F2A] hover:border-[#1C3A31] transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs border ${
+                          tx.type === 'INCOME'
+                            ? 'bg-[#11241F] text-[#14B8A6] border-[#1C3A31]/40'
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/10'
+                        }`}
+                      >
+                        {tx.type === 'INCOME' ? '+' : '-'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{tx.merchant}</p>
+                        <p className="text-xs text-[#7C9791]">
+                          {tx.category} • {tx.date}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span
+                        className={`text-sm font-bold font-mono ${
+                          tx.type === 'INCOME' ? 'text-[#14B8A6]' : 'text-white'
+                        }`}
+                      >
+                        {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(tx.amount, currency)}
+                      </span>
+                      {tx.hasReceipt && (
+                        <div className="text-[10px] text-[#14B8A6] font-semibold flex items-center justify-end gap-1 mt-0.5">
+                          <Check className="w-3 h-3" />
+                          <span>Comprobante Adjunto</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Footer */}

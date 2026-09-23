@@ -1,15 +1,11 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 import { PDFParse } from 'pdf-parse';
 
-dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config({ override: true });
 
 async function startServer() {
   const app = express();
@@ -19,18 +15,37 @@ async function startServer() {
 
   // Initialize Gemini Client lazily or safely
   const getGenAI = () => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const rawKey = process.env.GEMINI_API_KEY || '';
+    const apiKey = rawKey.trim().replace(/^\[|\]$/g, '');
     if (!apiKey) {
       console.warn('GEMINI_API_KEY is not set in environment variables');
     }
     return new GoogleGenAI({
-      apiKey: apiKey || '',
+      apiKey: apiKey,
       httpOptions: {
         headers: {
           'User-Agent': 'aistudio-build',
         },
       },
     });
+  };
+
+  // Helper to query Gemini with automatic resilience against temporary demand spikes
+  const generateGeminiContent = async (ai: GoogleGenAI, params: any) => {
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+    let lastError: any = null;
+    for (const model of candidateModels) {
+      try {
+        return await ai.models.generateContent({
+          ...params,
+          model,
+        });
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Gemini model ${model} encountered an issue (${err?.status || err?.message}). Attempting fallback candidate...`);
+      }
+    }
+    throw lastError;
   };
 
   // API Endpoint: Health check
@@ -80,8 +95,7 @@ Extrae los datos en formato JSON estricto con las siguientes llaves:
 
       parts.push({ text: promptText });
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+      const response = await generateGeminiContent(ai, {
         contents: { parts },
         config: {
           responseMimeType: 'application/json',
@@ -143,8 +157,7 @@ Devuelve un JSON con:
 5. taxCalendarTip: Consejo para la próxima fecha clave de declaración.
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+      const response = await generateGeminiContent(ai, {
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -203,43 +216,13 @@ Devuelve un JSON con:
 
       const currentScreenName = screenNames[currentTab] || currentTab;
 
-      const systemInstruction = `
-Eres "Fin", el asistente de inteligencia artificial oficial integrado en Fintack (Remix Fintack - Asistente Financiero Freelance).
-Tu personalidad es amigable, profesional, empática, concisa y directa.
+      const systemInstruction = `Eres "Fin", el asistente de Fintack. Tu función es ayudar al usuario a usar la app, no dar asesoría fiscal detallada. Responde de forma breve y directa (máximo 3-4 frases). Si el usuario pregunta sobre impuestos, da una respuesta general y sugiérele consultar la sección de Impuestos de la app o a un contador. Prioriza siempre guiar al usuario a la funcionalidad de Fintack que resuelve su problema (Dashboard, Historial, Escáner, Impuestos, Configuración). No des clases de contabilidad. Sé conciso y útil.
 
-CONOCIMIENTO CLAVE DE FINTACK:
-1. Propósito de la App: Diseñada para freelancers, nómadas digitales y contratistas independientes para gestionar finanzas personales/profesionales, digitalizar recibos mediante OCR inteligente y proyectar impuestos de forma automática.
-2. Pantallas de la App:
-   - Dashboard: Resumen ejecutivo (Ingresos, Gastos, Balance Neto, Carga Fiscal Estimada), selector de gráficos (Línea/Barras), acceso rápido a módulos.
-   - Historial (Transacciones): Registro detallado de ingresos y gastos con estado de deducibilidad, adjuntos de comprobantes y categorías. Exportación a Excel/PDF (disponible en plan Pro).
-   - Escáner IA: Digitaliza facturas y tickets en segundos. Extrae comercio, importe, IVA, categoría y porcentaje de deducibilidad. Soporta escaneo individual en Lite/Estándar y escaneo en lote múltiple en Pro.
-   - Impuestos: Cálculo en tiempo real de Impuesto sobre la Renta (ISR/IRPF), Impuesto al Valor Agregado (IVA/VAT), ahorro acumulado por gastos deducibles y calendario de fechas de presentación fiscal.
-   - Centro de Control / Configuración: Parámetros del régimen fiscal, tasas personalizadas, moneda principal, idioma, respaldo en la nube (Firebase Firestore) y selector de planes.
-3. Planes y Precios:
-   - 🌱 Lite (Gratis): Funciones esenciales, registro básico, resumen ejecutivo, 5 preguntas al día con Fin, 5 escaneos IA al mes.
-   - ⚖️ Estándar ($9 USD/mes): Presupuestos por categoría, gráficos analíticos avanzados, estimación de impuestos en tiempo real, 15 preguntas al día con Fin, 25 escaneos IA al mes.
-   - ⭐ Pro ($19 USD/mes): Exportación contable completa (PDF/Excel), multi-OCR por lote, sincronización en la nube con Firestore, preguntas ilimitadas con Fin y corrección automática de recibos.
-4. Cálculo de Impuestos:
-   - Fintack aplica las tasas de ISR/IRPF e IVA configuradas por el usuario (o por defecto según su país: México RESICO/Actividad Empresarial, España Autónomos, EE.UU. 1099/Schedule C, Colombia, etc.).
-   - Solo los gastos marcados como "Deducibles" reducen la base imponible del impuesto sobre la renta.
-5. Solución de Problemas Frecuentes:
-   - ¿No se guardan transacciones?: Verificar si se tiene espacio en el navegador o iniciar sesión en la nube (Firestore) para persistencia multidispositivo.
-   - ¿Imagen borrosa en el escáner?: Tomar la foto con buena iluminación y encuadrar el total y nombre del comercio claramente.
-   - ¿Cómo exportar?: Dirigirse al Historial y dar clic en "Exportar a Excel / PDF" (función disponible en Pro).
-
-CONTEXTO ACTUAL DEL USUARIO:
-- Pantalla actual donde se encuentra: "${currentScreenName}" (pestaña: ${currentTab}).
-- Plan de suscripción actual: ${plan}.
-- Moneda: ${taxSettings.currency || 'USD'}.
-- Régimen fiscal: ${taxSettings.taxRegime || 'General'}.
-
-PAUTAS DE RESPUESTA:
-- Responde siempre en español con tono claro, útil y profesional.
-- Ofrece respuestas estructuradas (puedes usar viñetas breves si ayuda a la claridad).
-- Si la pregunta se relaciona con la pantalla actual, prioriza explicar los controles o acciones de esa sección.
-- Si el usuario pregunta por funciones avanzadas exclusivas (ej. exportación o escaneo en lote), menciona amablemente que están disponibles en el plan Pro.
-- Mantén las respuestas breves y directas (no más de 3 párrafos cortos).
-`;
+Contexto de la app:
+- Pantalla actual: "${currentScreenName}" (pestaña: ${currentTab})
+- Plan: ${plan}
+- Moneda configurada: ${taxSettings.currency || 'USD'}
+- Régimen configurado: ${taxSettings.taxRegime || 'General Freelance'}`;
 
       // Format conversation contents
       const conversationContents: any[] = [];
@@ -257,12 +240,12 @@ PAUTAS DE RESPUESTA:
 
       conversationContents.push({ role: 'user', parts: [{ text: message }] });
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+      const response = await generateGeminiContent(ai, {
         contents: conversationContents,
         config: {
           systemInstruction,
-          temperature: 0.7,
+          temperature: 0.2,
+          maxOutputTokens: 600,
         },
       });
 
@@ -370,8 +353,7 @@ Devuelve UNICAMENTE un objeto JSON válido con esta estructura exacta:
 }
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+      const response = await generateGeminiContent(ai, {
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -514,8 +496,7 @@ Devuelve UNICAMENTE un objeto JSON válido con esta estructura:
 }
 `;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+      const response = await generateGeminiContent(ai, {
         contents: prompt,
         config: {
           responseMimeType: 'application/json',

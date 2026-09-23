@@ -82,7 +82,7 @@ const FAQ_KNOWLEDGE_BASE: Array<{
   {
     keywords: ['deducible', 'gastos deducibles', 'qué puedo deducir'],
     reply:
-      'Como freelancer o trabajador independiente, generalmente puedes deducir gastos indispensables para tu actividad:\n\n• Software y suscripciones de trabajo (Adobe, Figma, servidores, etc.)\n• Equipo de cómputo y oficina\n• Internet y telefonía móvil\n• Cursos de formación y capacitación profesional\n• Transporte o combustible relacionado con visitas a clientes\n\nAl registrar cada gasto en Fintack puedes fijar si es 100%, 50% o 0% deducible.',
+      'Como freelancer o trabajador independiente, generalmente puedes deducir gastos indispensables para tu actividad:\n\n• Software y suscripciones de trabajo (herramientas profesionales, servicios cloud, etc.)\n• Equipo de cómputo y oficina\n• Internet y telefonía móvil\n• Cursos de formación y capacitación profesional\n• Transporte o combustible relacionado con visitas a clientes\n\nAl registrar cada gasto en Fintack puedes fijar si es 100%, 50% o 0% deducible.',
     category: 'taxes',
   },
   {
@@ -259,7 +259,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
       // ignore
     }
 
-    // Try API call first
+    // Call Gemini Assistant API on backend
     try {
       const res = await fetch('/api/assistant/chat', {
         method: 'POST',
@@ -287,9 +287,14 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
           return;
         }
       }
-      throw new Error('Fallback to local knowledge base');
-    } catch {
-      // Intelligent Local Knowledge Base Matcher as robust fallback
+
+      const errorPayload = await res.json().catch(() => ({}));
+      console.warn('Gemini chat API error:', errorPayload);
+      throw new Error(errorPayload.error || 'Error al comunicarse con Gemini');
+    } catch (err: any) {
+      console.error('Error en consulta de asistente:', err);
+
+      // Check if user is asking a basic app usability FAQ as offline backup
       const lowerQuery = text.toLowerCase();
       let matchedReply = '';
 
@@ -302,24 +307,20 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
 
       if (!matchedReply) {
         if (lowerQuery.includes('gracias') || lowerQuery.includes('hola') || lowerQuery.includes('buenos')) {
-          matchedReply = '¡Con gusto! Estoy aquí para resolver cualquier duda que tengas sobre Fintack, deducciones fiscales o cómo registrar tus comprobantes.';
+          matchedReply = '¡Hola! Estoy aquí para resolver tus dudas sobre tributación para freelancers, deducciones fiscales o el uso de Fintack. ¿En qué te puedo asesorar?';
         } else {
-          matchedReply = `Entendido. Para tu consulta sobre "${text}", te sugiero revisar la sección de **${getScreenDisplayName(
-            currentTab
-          )}**. Si necesitas configurar tus impuestos o cambiar de plan, puedes ir a **Configuración** o preguntarme directamente sobre cómo añadir gastos o calcular el ISR.`;
+          matchedReply = 'Lo siento, no pude obtener respuesta de la API de Gemini en este momento. Por favor verifica que tu clave esté activa e inténtalo nuevamente.';
         }
       }
 
-      setTimeout(() => {
-        const assistantMsg: Message = {
-          id: generateUniqueId('msg-ai'),
-          sender: 'assistant',
-          text: matchedReply,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-        setIsLoading(false);
-      }, 400);
+      const assistantMsg: Message = {
+        id: generateUniqueId('msg-ai'),
+        sender: 'assistant',
+        text: matchedReply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+      setIsLoading(false);
     }
   };
 

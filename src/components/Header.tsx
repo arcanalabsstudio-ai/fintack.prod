@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PlanType, TaxSettings } from '../types';
-import { Crown, Settings, TrendingUp, Receipt, Scan, ShieldAlert, Activity, Menu, X, ChevronDown, Cloud, LogOut } from 'lucide-react';
+import { Crown, Settings, TrendingUp, Receipt, Scan, ShieldAlert, Activity, Menu, X, ChevronDown, Cloud, Home } from 'lucide-react';
 import { TRANSLATIONS } from '../utils/translations';
 import { SyncStatus } from '../services/cloudDatabase';
 import { User } from '../lib/firebase';
@@ -15,7 +15,6 @@ interface HeaderProps {
   syncStatus?: SyncStatus;
   user?: User | null;
   onOpenCloudModal?: () => void;
-  onReturnToLogin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,7 +27,6 @@ export const Header: React.FC<HeaderProps> = ({
   syncStatus = 'synced',
   user,
   onOpenCloudModal,
-  onReturnToLogin,
 }) => {
   const currentLang = taxSettings.language || 'es';
   const t = TRANSLATIONS[currentLang];
@@ -58,61 +56,68 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
           
           {/* 1. IZQUIERDA: Logo FINTACK con nuevo isotipo */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-transparent shrink-0" id="header-logo">
-              <svg
-                className="w-full h-full filter drop-shadow-[0_2px_8px_rgba(0,245,182,0.22)]"
-                viewBox="31 41 120.5 105"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <linearGradient
-                    id="headerBrandGrad1"
-                    x1="72.167"
-                    y1="116.299"
-                    x2="148.16"
-                    y2="53"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop offset="0%" stopColor="#008c68" />
-                    <stop offset="100%" stopColor="#00f5b6" />
-                  </linearGradient>
-                  <radialGradient
-                    id="headerBrandGrad2"
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleTabClick('dashboard')}
+              className="flex items-center gap-2 sm:gap-2.5 text-left cursor-pointer group focus:outline-none"
+              title="Fintack - Ir al Dashboard"
+            >
+              <div className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-transparent shrink-0" id="header-logo">
+                <svg
+                  className="w-full h-full filter drop-shadow-[0_2px_8px_rgba(0,245,182,0.22)]"
+                  viewBox="31 41 120.5 105"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient
+                      id="headerBrandGrad1"
+                      x1="72.167"
+                      y1="116.299"
+                      x2="148.16"
+                      y2="53"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop offset="0%" stopColor="#008c68" />
+                      <stop offset="100%" stopColor="#00f5b6" />
+                    </linearGradient>
+                    <radialGradient
+                      id="headerBrandGrad2"
+                      cx="122.85"
+                      cy="115.35"
+                      r="7.05"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop offset="0%" stopColor="#ffffff" />
+                      <stop offset="100%" stopColor="#a7f3d0" />
+                    </radialGradient>
+                  </defs>
+                  <path
+                    fill="url(#headerBrandGrad1)"
+                    stroke="#004d38"
+                    strokeWidth="1.6"
+                    d="M 91.499998,44.1 34.026839,143.64643 H 148.5 l -9.57642,-16.58684 H 102 L 120.61881,94.81086 110.59998,77.457743 82.015863,126.96689 H 63.3 l 38.1328,-66.047952 z"
+                  />
+                  <circle
+                    fill="url(#headerBrandGrad2)"
+                    stroke="#004d38"
+                    strokeWidth="0.8"
                     cx="122.85"
                     cy="115.35"
                     r="7.05"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop offset="0%" stopColor="#ffffff" />
-                    <stop offset="100%" stopColor="#a7f3d0" />
-                  </radialGradient>
-                </defs>
-                <path
-                  fill="url(#headerBrandGrad1)"
-                  stroke="#004d38"
-                  strokeWidth="1.6"
-                  d="M 91.499998,44.1 34.026839,143.64643 H 148.5 l -9.57642,-16.58684 H 102 L 120.61881,94.81086 110.59998,77.457743 82.015863,126.96689 H 63.3 l 38.1328,-66.047952 z"
-                />
-                <circle
-                  fill="url(#headerBrandGrad2)"
-                  stroke="#004d38"
-                  strokeWidth="0.8"
-                  cx="122.85"
-                  cy="115.35"
-                  r="7.05"
-                />
-              </svg>
-            </div>
-            <div className="flex md:hidden lg:flex items-center gap-1.5">
-              <span className="text-base font-black uppercase tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-[#14B8A6] via-[#99F6E4] to-white leading-tight">
-                FINTACK
-              </span>
-              <span className="hidden lg:inline-block text-[9px] font-bold tracking-wider uppercase bg-[#11221D] text-[#14B8A6] px-1.5 py-0.5 rounded-md border border-[#1C3A31]">
-                Freelance
-              </span>
-            </div>
+                  />
+                </svg>
+              </div>
+              <div className="flex md:hidden lg:flex items-center gap-1.5">
+                <span className="text-base font-black uppercase tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-[#14B8A6] via-[#99F6E4] to-white leading-tight group-hover:brightness-110 transition">
+                  FINTACK
+                </span>
+                <span className="hidden lg:inline-block text-[9px] font-bold tracking-wider uppercase bg-[#11221D] text-[#14B8A6] px-1.5 py-0.5 rounded-md border border-[#1C3A31]">
+                  Freelance
+                </span>
+              </div>
+            </button>
           </div>
 
           {/* 2. CENTRO: Pestañas Compactas (Solo en Escritorio / md:flex) */}
@@ -149,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </nav>
 
-          {/* 3. DERECHA: Selector de Plan, Config & Menú Hamburguesa */}
+          {/* 3. DERECHA: Selector de Plan, Botones de Acción (Home, Nube, Config & Menú) */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Selector de Plan para Tablets (md:flex lg:hidden) */}
             <div className="hidden md:flex lg:hidden items-center relative">
@@ -204,53 +209,68 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            {/* Botón Nube Firestore */}
+            {/* Botón Home (Casa) */}
             <button
-              onClick={onOpenCloudModal}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-[#0B1512] hover:bg-[#11241F] border border-[#1C3A31] text-[#7C9791] hover:text-white transition shadow-xs"
-              title="Base de Datos en la Nube (Firestore)"
-              id="cloud-sync-btn"
+              type="button"
+              id="header-home-btn"
+              onClick={() => handleTabClick('dashboard')}
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl border transition flex items-center justify-center cursor-pointer shadow-xs ${
+                currentTab === 'dashboard'
+                  ? 'bg-[#163029] text-[#14B8A6] border-[#14B8A6]/40 shadow-xs'
+                  : 'text-[#7C9791] hover:text-[#14B8A6] hover:bg-[#11241F] bg-[#0B1512] border-[#1C3A31]'
+              }`}
+              title="Inicio (Dashboard)"
+              aria-label="Ir al Inicio"
             >
-              <Cloud className="w-3.5 h-3.5 text-[#14B8A6]" />
-              <span className={`w-1.5 h-1.5 rounded-full ${syncStatus === 'synced' ? 'bg-[#14B8A6] shadow-[0_0_4px_#14B8A6]' : syncStatus === 'saving' ? 'bg-amber-400 animate-pulse' : 'bg-sky-400'}`} />
-              <span className="hidden sm:inline text-[11px] text-[#A7F3D0]">
-                {syncStatus === 'saving' ? 'Guardando' : 'Nube'}
-              </span>
+              <Home className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
 
-            {/* Botón Temporal para regresar al Login */}
-            {onReturnToLogin && (
-              <button
-                type="button"
-                onClick={onReturnToLogin}
-                id="btn-temp-return-login"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/30 hover:border-amber-500/50 transition shadow-xs cursor-pointer group"
-                title="Botón temporal: Regresar a la pantalla de Login"
-              >
-                <LogOut className="w-3.5 h-3.5 text-amber-400 group-hover:-translate-x-0.5 transition-transform" />
-                <span className="hidden sm:inline">Volver a Login</span>
-                <span className="text-[9px] font-mono font-bold uppercase bg-amber-500/25 text-amber-200 px-1 py-0.2 rounded border border-amber-500/40">
-                  Temp
-                </span>
-              </button>
-            )}
+            {/* Botón Nube Firestore */}
+            <button
+              type="button"
+              onClick={onOpenCloudModal}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#0B1512] hover:bg-[#11241F] border border-[#1C3A31] text-[#7C9791] hover:text-white flex items-center justify-center transition shadow-xs cursor-pointer relative"
+              title={`Base de Datos en la Nube (${syncStatus === 'synced' ? 'Sincronizado' : syncStatus === 'saving' ? 'Guardando...' : 'Conectando'})`}
+              id="cloud-sync-btn"
+              aria-label="Estado de la Nube"
+            >
+              <div className="relative flex items-center justify-center">
+                <Cloud className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#14B8A6]" />
+                <span
+                  className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
+                    syncStatus === 'synced'
+                      ? 'bg-[#14B8A6] shadow-[0_0_6px_#14B8A6]'
+                      : syncStatus === 'saving'
+                      ? 'bg-amber-400 animate-pulse'
+                      : 'bg-sky-400'
+                  }`}
+                />
+              </div>
+            </button>
 
             {/* Botón Configuración */}
             <button
+              type="button"
               onClick={onOpenSettings}
-              className="p-2 text-[#7C9791] hover:text-white bg-[#0B1512] hover:bg-[#11241F] rounded-xl border border-[#1C3A31] transition"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-[#7C9791] hover:text-white bg-[#0B1512] hover:bg-[#11241F] border border-[#1C3A31] transition flex items-center justify-center shadow-xs cursor-pointer"
               title="Configuración Fiscal"
+              aria-label="Configuración"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </button>
 
             {/* Menú Hamburguesa para Móviles (md:hidden) */}
             <button
+              type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-[#14B8A6] bg-[#0B1512] hover:bg-[#11241F] rounded-xl border border-[#1C3A31] transition"
+              className="md:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-[#14B8A6] bg-[#0B1512] hover:bg-[#11241F] border border-[#1C3A31] transition flex items-center justify-center shadow-xs cursor-pointer"
               aria-label="Toggle Menu"
             >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {isMobileMenuOpen ? (
+                <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              ) : (
+                <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              )}
             </button>
           </div>
         </div>
@@ -318,27 +338,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               );
             })}
-
-            {/* Botón Temporal para regresar al Login (Móvil) */}
-            {onReturnToLogin && (
-              <div className="pt-2 border-t border-[#182F2A]/60 px-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    onReturnToLogin();
-                  }}
-                  id="btn-temp-return-login-mobile"
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold rounded-xl border border-amber-500/30 transition cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Regresar al Login</span>
-                  <span className="text-[9px] font-mono font-bold uppercase bg-amber-500/25 text-amber-200 px-1 py-0.2 rounded border border-amber-500/40">
-                    Temp
-                  </span>
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>

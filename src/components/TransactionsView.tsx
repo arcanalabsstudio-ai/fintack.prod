@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Transaction, PlanType, TaxSettings } from '../types';
 import { calculateTaxEstimate, formatCurrency } from '../utils/taxCalculator';
 import { TRANSLATIONS } from '../utils/translations';
-import { Search, Filter, Download, Trash2, Pencil, FileCheck, Info, FileSpreadsheet, Plus, Crown, CheckCircle2, X, SlidersHorizontal, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { Search, Filter, Download, Trash2, Pencil, FileCheck, Info, FileSpreadsheet, Crown, CheckCircle2, X, SlidersHorizontal, ChevronDown, ChevronUp, Lock, Receipt } from 'lucide-react';
 import { EditTransactionModal } from './EditTransactionModal';
 import { ExportReportModal } from './ExportReportModal';
 import { ProLockModal } from './ProLockModal';
@@ -245,7 +245,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
           <button
             type="button"
             onClick={() => setIsImportModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2.5 bg-[#14B8A6] hover:bg-[#0D9488] text-[#020504] font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs group cursor-pointer"
+            className="flex-1 sm:flex-none px-4 py-2.5 bg-[#11241F] hover:bg-[#163029] border border-[#14B8A6]/40 text-[#14B8A6] font-semibold text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs group cursor-pointer"
             title="Importar extracto en CSV o PDF"
           >
             <FileSpreadsheet className="w-4 h-4 transition group-hover:scale-110" />
@@ -483,22 +483,36 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               <tbody className="divide-y divide-[#182F2A]">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={plan === 'LITE' ? 5 : 6} className="p-10 text-center">
-                      <div className="flex flex-col items-center justify-center gap-2.5">
-                        <Filter className="w-8 h-8 text-[#4A645F]" />
-                        <p className="text-sm font-semibold text-white">
-                          {getNoResultsMessage()}
-                        </p>
-                        {hasActiveFilters && (
-                          <button
-                            onClick={handleClearFilters}
-                            className="mt-1 px-3.5 py-1.5 bg-[#11241F] text-[#14B8A6] hover:bg-[#18352D] text-xs font-semibold rounded-xl border border-[#1C3A31] transition flex items-center gap-1.5"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Limpiar Filtros</span>
-                          </button>
-                        )}
-                      </div>
+                    <td colSpan={plan === 'LITE' ? 5 : 6} className="p-12 text-center">
+                      {transactions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center gap-3 py-6">
+                          <div className="p-3 bg-[#11241F] text-[#14B8A6] rounded-2xl border border-[#1C3A31]">
+                            <Receipt className="w-8 h-8 text-[#14B8A6]" />
+                          </div>
+                          <p className="text-base font-bold text-white">
+                            {t.welcomeTitle || 'Bienvenido a Fintack'}
+                          </p>
+                          <p className="text-xs text-[#7C9791] max-w-md">
+                            {t.welcomeDesc || 'Agrega tu primera transacción para comenzar a ver tu panorama fiscal'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-2.5">
+                          <Filter className="w-8 h-8 text-[#4A645F]" />
+                          <p className="text-sm font-semibold text-white">
+                            {getNoResultsMessage()}
+                          </p>
+                          {hasActiveFilters && (
+                            <button
+                              onClick={handleClearFilters}
+                              className="mt-1 px-3.5 py-1.5 bg-[#11241F] text-[#14B8A6] hover:bg-[#18352D] text-xs font-semibold rounded-xl border border-[#1C3A31] transition flex items-center gap-1.5"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Limpiar Filtros</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -591,21 +605,35 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         {/* Card View (Mobile) */}
         <div className="sm:hidden space-y-3">
           {filtered.length === 0 ? (
-            <div className="p-8 text-center text-[#7C9791] bg-[#0B1512] rounded-2xl border border-[#182F2A] flex flex-col items-center justify-center gap-2.5">
-              <Filter className="w-8 h-8 text-[#4A645F]" />
-              <p className="text-sm font-semibold text-white">
-                {getNoResultsMessage()}
-              </p>
-              {hasActiveFilters && (
-                <button
-                  onClick={handleClearFilters}
-                  className="mt-1 px-3.5 py-1.5 bg-[#11241F] text-[#14B8A6] hover:bg-[#18352D] text-xs font-semibold rounded-xl border border-[#1C3A31] transition flex items-center gap-1.5"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Limpiar Filtros</span>
-                </button>
-              )}
-            </div>
+            transactions.length === 0 ? (
+              <div className="p-8 text-center bg-[#0B1512] rounded-2xl border border-[#182F2A] flex flex-col items-center justify-center gap-3">
+                <div className="p-3 bg-[#11241F] text-[#14B8A6] rounded-2xl border border-[#1C3A31]">
+                  <Receipt className="w-7 h-7 text-[#14B8A6]" />
+                </div>
+                <p className="text-base font-bold text-white">
+                  {t.welcomeTitle || 'Bienvenido a Fintack'}
+                </p>
+                <p className="text-xs text-[#7C9791] max-w-xs">
+                  {t.welcomeDesc || 'Agrega tu primera transacción para comenzar a ver tu panorama fiscal'}
+                </p>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-[#7C9791] bg-[#0B1512] rounded-2xl border border-[#182F2A] flex flex-col items-center justify-center gap-2.5">
+                <Filter className="w-8 h-8 text-[#4A645F]" />
+                <p className="text-sm font-semibold text-white">
+                  {getNoResultsMessage()}
+                </p>
+                {hasActiveFilters && (
+                  <button
+                    onClick={handleClearFilters}
+                    className="mt-1 px-3.5 py-1.5 bg-[#11241F] text-[#14B8A6] hover:bg-[#18352D] text-xs font-semibold rounded-xl border border-[#1C3A31] transition flex items-center gap-1.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Limpiar Filtros</span>
+                  </button>
+                )}
+              </div>
+            )
           ) : (
             filtered.map((tx) => (
               <div key={tx.id} className="bg-[#0B1512] p-4 rounded-2xl border border-[#182F2A] shadow-md flex items-center justify-between gap-4">
